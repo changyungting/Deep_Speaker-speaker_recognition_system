@@ -85,46 +85,28 @@ def data_catalog(dataset_dir=c.DATASET_DIR, pattern='*.npy'):
   # print(libri.head(10))
     return libri
 
-def prep(libri,out_dir=c.DATASET_DIR,name='0'):
-    start_time = time()
+def prep(libri,out_dir=c.DATASET_DIR):
+    os.mkdir("audio/LibriSpeechSamples/train-clean-100-npy")
     i=0
     for i in range(len(libri)):
-        orig_time = time()
-        filename = libri[i:i+1]['filename'].values[0]
-        target_filename = out_dir + filename.split("/")[-1].split('.')[0] + '.npy'
-        if os.path.exists(target_filename):
-            if i % 10 == 0: print("task:{0} No.:{1} Exist File:{2}".format(name, i, filename))
-            continue
+        filename = libri[i:i+1]['filename'].values[0] # for example :audio/LibriSpeechSamples/train-clean-100/1/100/1-100-0001.wav
+        target_filename = out_dir + filename.split("/")[-1].split('.')[0] + '.npy' # for example :audio/LibriSpeechSamples/train-clean-100-npy/1-100-0001.npy
+        fp = open(target_filename,'w')  
+        fp.close()
         raw_audio = read_audio(filename)
         feature = extract_features(raw_audio, target_sample_rate=SAMPLE_RATE)
         if feature.ndim != 3 or feature.shape[0] < c.NUM_FRAMES or feature.shape[1] !=64 or feature.shape[2] != 1:
             print('there is an error in file:',filename)
             continue
         np.save(target_filename, feature)
-        if i % 100 == 0:
-            print("task:{0} cost time per audio: {1:.3f}s No.:{2} File name:{3}".format(name, time() - orig_time, i, filename))
-    print("task %s runs %d seconds. %d files" %(name, time()-start_time,i))
-
 
 def preprocess_and_save(wav_dir=c.WAV_DIR,out_dir=c.DATASET_DIR):
 
     orig_time = time()
     libri = data_catalog(wav_dir, pattern='**/*.wav') 
 
-    print("extract fbank from audio and save as npy")
-    p = Pool(5)
-    patch = int(len(libri)/5)
-    for i in range(5):
-        if i < 4:
-            slibri=libri[i*patch: (i+1)*patch]
-        else:
-            slibri = libri[i*patch:]
-        print("task %s slibri length: %d" %(i, len(slibri)))
-        p.apply_async(prep, args=(slibri,out_dir,i))
-    print('Waiting for all subprocesses done...')
-    p.close()
-    p.join()
-
+    print("Extract fbank from audio and save as npy")
+    prep(libri,out_dir)
     print("Extract audio features and save it as npy file, cost {0} seconds".format(time()-orig_time))
 
 def test():
