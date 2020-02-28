@@ -2,21 +2,19 @@
 # pre processd an audio in 0.09912s
 
 import os
-from glob import glob
-from python_speech_features import fbank, delta
 import librosa
 import numpy as np
 import pandas as pd
-import pickle
-from multiprocessing import Pool
+from glob import glob
+from python_speech_features import fbank, delta
 
-import silence_detector
 import constants as c
-from constants import SAMPLE_RATE
+import silence_detector
 from time import time
+from constants import SAMPLE_RATE
 
-np.set_printoptions(threshold=np.nan)
-#pd.set_option('display.height', 1000)
+
+np.set_printoptions(threshold=10)
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
@@ -25,7 +23,10 @@ pd.set_option('max_colwidth', 100)
 
 def find_files(directory, pattern='**/*.wav'):
     """Recursively finds all files matching the pattern."""
-    return glob(os.path.join(directory, pattern), recursive=True)
+    return glob(os.path.join(directory, pattern), recursive=True) 
+    # 如果 recursive 是真值，则模式 "**" 将匹配目录中的任何文件或零个或多个目錄
+    # 返回所有匹配(audio/LibriSpeechSamples/train-clean-100/**/*.wav)的文件列表 
+    
 
 def VAD(audio):
     chunk_size = int(SAMPLE_RATE*0.05) # 50ms
@@ -70,14 +71,18 @@ def extract_features(signal=np.random.uniform(size=48000), target_sample_rate=SA
     num_frames = len(frames_features)
     return np.reshape(np.array(frames_features),(num_frames, 64, 1))   #(num_frames,64, 1)
 
-def data_catalog(dataset_dir=c.DATASET_DIR, pattern='*.npy'):
-    libri = pd.DataFrame()
+def data_catalog(dataset_dir=c.DATASET_DIR, pattern='*.npy'): 
+     #                          filename                                       speaker_id
+     #   0    audio/LibriSpeechSamples/train-clean-100/1/100/1-100-0001.wav        1
+     #   1    audio/LibriSpeechSamples/train-clean-100/1/100/1-100-0002.wav        1
+    
+    libri = pd.DataFrame()                                            
     libri['filename'] = find_files(dataset_dir, pattern=pattern)
     libri['filename'] = libri['filename'].apply(lambda x: x.replace('\\', '/'))  # normalize windows paths
-    libri['speaker_id'] = libri['filename'].apply(lambda x: x.split('/')[-1].split('-')[0])
+    libri['speaker_id'] = libri['filename'].apply(lambda x: x.split('/')[-1].split('-')[0]) # x.split('/')[-1]->1-100-0001.wav 
     num_speakers = len(libri['speaker_id'].unique())
-    print('Found {} files with {} different speakers.'.format(str(len(libri)).zfill(7), str(num_speakers).zfill(5)))
-    # print(libri.head(10))
+    print('Found {} files with {} different speakers.'.format(str(len(libri)).zfill(7), str(num_speakers).zfill(5)))# 返回指定長度的字符串
+  # print(libri.head(10))
     return libri
 
 def prep(libri,out_dir=c.DATASET_DIR,name='0'):
@@ -104,9 +109,9 @@ def prep(libri,out_dir=c.DATASET_DIR,name='0'):
 def preprocess_and_save(wav_dir=c.WAV_DIR,out_dir=c.DATASET_DIR):
 
     orig_time = time()
-    libri = data_catalog(wav_dir, pattern='**/*.wav')  #'/Users/walle/PycharmProjects/Speech/coding/deep-speaker-master/audio/LibriSpeechSamples/train-clean-100/19'
+    libri = data_catalog(wav_dir, pattern='**/*.wav') 
 
-    print("extract fbank from audio and save as npy, using multiprocessing pool........ ")
+    print("extract fbank from audio and save as npy")
     p = Pool(5)
     patch = int(len(libri)/5)
     for i in range(5):
@@ -121,8 +126,6 @@ def preprocess_and_save(wav_dir=c.WAV_DIR,out_dir=c.DATASET_DIR):
     p.join()
 
     print("Extract audio features and save it as npy file, cost {0} seconds".format(time()-orig_time))
-    print("*^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*  *^ˍ^*")
-
 
 def test():
     libri = data_catalog()
@@ -133,5 +136,4 @@ def test():
     print(filename)
 
 if __name__ == '__main__':
-    #test()
     preprocess_and_save("audio/LibriSpeechSamples/train-clean-100")
