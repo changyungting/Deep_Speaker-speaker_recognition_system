@@ -110,12 +110,10 @@ def preprocess_and_save(wav_dir=c.WAV_DIR,out_dir=c.DATASET_DIR):
     print("Extract audio features and save it as npy file, cost {0} seconds".format(time()-orig_time))
 
 def test():
-    libri = data_catalog()
     filename = 'audio/LibriSpeechSamples/train-clean-100/19/227/19-227-0036.wav'
-    raw_audio = read_audio(filename)
-    print(filename)
-    feature = extract_features(raw_audio, target_sample_rate=SAMPLE_RATE)
-    print(filename)
+    raw_audio = read_audio(filename) # (187200,)
+    feature = extract_features(raw_audio, target_sample_rate=SAMPLE_RATE) # (1169,64,1)-> different file have different size (***,64,1)
+    print(feature.shape) 
 
 if __name__ == '__main__':
     preprocess_and_save("audio/LibriSpeechSamples/train-clean-100")
