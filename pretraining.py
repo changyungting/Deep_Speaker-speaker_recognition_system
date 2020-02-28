@@ -21,29 +21,42 @@ from time import time
 import sys
 from sklearn.model_selection import train_test_split
 
-def loadFromList(x_paths, batch_start, limit, labels_to_id, no_of_speakers, ):
+def loadFromList(paths, batch_start, batch_end, labels_to_id, no_of_speakers, ):
+    
+    # path =[audio/LibriSpeechSamples/train-clean-100-npy/19-100-0001.npy,
+    #        audio/LibriSpeechSamples/train-clean-100-npy/19-100-0002.npy,
+    #                                ...                                  ]
     x = []
-    y_ = []
-    for i in range(batch_start, limit):
-        x_ = np.load(x_paths[i])
-        x.append(clipped_audio(x_))
+    y_ = []                              
+    for i in range(batch_start, batch_end):
+        x_ = np.load(paths[i]) # 讀npy檔案並回傳npy檔案內容(ndarray type)
+        x.append(clipped_audio(x_)) 
 
-        last = x_paths[i].split("/")[-1]
-        y_.append(labels_to_id[last.split("-")[0]])
+        last = paths[i].split("/")[-1] # for example:last->19-100-0001.npy
+        y_.append(labels_to_id[last.split("-")[0]]) # for example:last.split("-")[0]]->19, labels_to_id[19]=0
 
     x = np.asarray(x)
-
-    y = np.eye(no_of_speakers)[y_]    #one-hot
+    # array和asarray都可以把list轉化成ndarray，
+    # 但是主要區別為當數據源是ndarray时，array仍然会copy出一个副本，占用新的内存，但asarray不會
+    y = np.eye(no_of_speakers)[y_]  # one-hot array (96,251)->96 batch size, 251 speaker 
     y = np.asarray(y)
     return x, y
+    # x =array(1st data array,2nd data array,3rd data array,...)
+    # y_=list(labels_to_id[1st data speaker_id],labels_to_id[2nd data speaker_id],labels_to_id[3rd data speaker_id],...]
+    # for example: y_=[1,3,4,5]
+    #              y =np.eye(6)[y_]
+    #              y =[0,1,0,0,0,0,
+    #                  0,0,0,1,0,0,
+    #                  0,0,0,0,1,0,
+    #                  0,0,0,0,0,1,]
 
 def batchTrainingImageLoader(train_data, labels_to_id, no_of_speakers, batch_size=c.BATCH_SIZE * c.TRIPLET_PER_BATCH):
-    paths = train_data
-    L = len(paths)
+    paths = train_data  # train data
+    L = len(paths) # train data size
     while True:
-        np.random.shuffle(paths)
+        np.random.shuffle(paths) # 所有元素隨機排序
         batch_start = 0
-        batch_end = batch_size
+        batch_end = batch_size   # 32*3=96
 
         while batch_end < L:
             x_train_t, y_train_t = loadFromList(paths, batch_start, batch_end, labels_to_id, no_of_speakers)
@@ -52,7 +65,7 @@ def batchTrainingImageLoader(train_data, labels_to_id, no_of_speakers, batch_siz
             random.shuffle(x_train_t)
             random.seed(randnum)
             random.shuffle(y_train_t)
-            yield (x_train_t, y_train_t)
+            yield (x_train_t, y_train_t) # 類似於return 
             batch_start += batch_size
             batch_end += batch_size
 
@@ -70,18 +83,19 @@ def batchTestImageLoader(test_data, labels_to_id, no_of_speakers, batch_size=c.B
             batch_start += batch_size
             batch_end += batch_size
 
-def split_data(files, labels, batch_size):
-    test_size = max(batch_size/len(labels),0.05)
-    train_paths, test_paths, y_train, y_test = train_test_split(files, labels, test_size=test_size, random_state=42)
-    return train_paths, test_paths
+def split_data(files, labels):
+    test_size = 0.05 
+    x_train, x_test, y_train, y_test = train_test_split(files, labels, test_size=test_size, random_state=42) #從樣本中随機的按比例選取train data和testdata
+    return x_train, x_test
 
 
 def main():
-    batch_size = c.BATCH_SIZE * c.TRIPLET_PER_BATCH
-    # train_path = "/Users/walle/PycharmProjects/Speech/coding/deep-speaker-master/audio/LibriSpeechSamples/train-clean-100"
+    batch_size = c.BATCH_SIZE * c.TRIPLET_PER_BATCH #32*3=96
     train_path = c.DATASET_DIR
-
-    libri = data_catalog(train_path)
+    libri = data_catalog(train_path) 
+    #                        filename                                                speaker_id
+    #   0      audio/LibriSpeechSamples/train-clean-100-npy/19-100-0001.npy              19
+    #   1      audio/LibriSpeechSamples/train-clean-100-npy/26-100-0002.npy              26
     files = list(libri['filename'])
     labels1 = list(libri['speaker_id'])
 
@@ -90,13 +104,19 @@ def main():
     i = 0
 
     for label in np.unique(labels1):
-        labels_to_id[label] = i
-        id_to_labels[i] = label
+        labels_to_id[label] = i   # for example:labels_to_id[19]=0 labels_to_id[26]=1
+        id_to_labels[i] = label   # for example:id_to_labels[0]=19 id_to_labels[1]=26
         i += 1
 
     no_of_speakers = len(np.unique(labels1))
 
-    train_data, test_data = split_data(files, labels1, batch_size)
+    train_data, test_data = split_data(files, labels1)
+    # train_data=[audio/LibriSpeechSamples/train-clean-100-npy/19-100-0001.npy,
+    #             audio/LibriSpeechSamples/train-clean-100-npy/19-100-0002.npy,
+    #                               ...                                       ]
+    # test_data =[audio/LibriSpeechSamples/train-clean-100-npy/19-100-0063.npy,
+    #             audio/LibriSpeechSamples/train-clean-100-npy/19-100-0064.npy,
+    #                               ...                                       ]
     batchloader = batchTrainingImageLoader(train_data,labels_to_id,no_of_speakers, batch_size=batch_size)
     testloader = batchTestImageLoader(test_data, labels_to_id, no_of_speakers, batch_size=batch_size)
     test_steps = int(len(test_data)/batch_size)
