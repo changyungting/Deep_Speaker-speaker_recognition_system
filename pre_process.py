@@ -72,18 +72,16 @@ def extract_features(signal=np.random.uniform(size=48000), target_sample_rate=SA
     return np.reshape(np.array(frames_features),(num_frames, 64, 1))   #(num_frames,64, 1)
 
 def data_catalog(dataset_dir=c.DATASET_DIR, pattern='*.npy'): 
-     #                          filename                                       speaker_id
-     #   0    audio/LibriSpeechSamples/train-clean-100/1/100/1-100-0001.wav        1
-     #   1    audio/LibriSpeechSamples/train-clean-100/1/100/1-100-0002.wav        1
-    
     libri = pd.DataFrame()                                            
     libri['filename'] = find_files(dataset_dir, pattern=pattern)
     libri['filename'] = libri['filename'].apply(lambda x: x.replace('\\', '/'))  # normalize windows paths
     libri['speaker_id'] = libri['filename'].apply(lambda x: x.split('/')[-1].split('-')[0]) # x.split('/')[-1]->1-100-0001.wav 
     num_speakers = len(libri['speaker_id'].unique())
     print('Found {} files with {} different speakers.'.format(str(len(libri)).zfill(7), str(num_speakers).zfill(5)))# 返回指定長度的字符串
-  # print(libri.head(10))
     return libri
+    #                          filename                                       speaker_id
+    #   0    audio/LibriSpeechSamples/train-clean-100/1/100/1-100-0001.wav        1
+    #   1    audio/LibriSpeechSamples/train-clean-100/1/100/1-100-0002.wav        1
 
 def prep(libri,out_dir=c.DATASET_DIR):
     os.mkdir("audio/LibriSpeechSamples/train-clean-100-npy")
