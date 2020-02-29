@@ -8,9 +8,9 @@ from models import convolutional_model, convolutional_model_simple
 from glob import glob
 import logging
 import os
-from keras.models import Model
-from keras.layers.core import Dense
-from keras.optimizers import Adam
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers.core import Dense
+from tensorflow.python.keras.optimizers import Adam
 import numpy as np
 import random
 import constants as c
@@ -19,6 +19,7 @@ from pre_process import data_catalog, preprocess_and_save
 from select_batch import clipped_audio
 from time import time
 import sys
+import shutil
 from sklearn.model_selection import train_test_split
 
 def loadFromList(paths, batch_start, batch_end, labels_to_id, no_of_speakers, ):
@@ -87,7 +88,7 @@ def batchTestImageLoader(test_data, labels_to_id, no_of_speakers, batch_size=c.B
 
 def split_data(files, labels):
     test_size = 0.05 
-    x_train, x_test, y_train, y_test = train_test_split(files, labels, test_size=test_size, random_state=42) #從樣本中随機的按比例選取train data和testdata
+    x_train, x_test, y_train, y_test = train_test_split(files, labels, test_size=test_size, random_state=42)#從樣本中随機的按比例選取train data和testdata
     return x_train, x_test
 
 
@@ -113,12 +114,20 @@ def main():
     no_of_speakers = len(np.unique(labels1))
 
     train_data, test_data = split_data(files, labels1)
+    os.mkdir("audio/LibriSpeechSamples/test-clean-100-npy")
+    print(len(test_data))
+    for i in range(len(test_data)):
+        shutil.move(test_data[i],os.path.join("audio/LibriSpeechSamples/test-clean-100-npy",test_data[i].split('/')[-1]))  
+        test_data[i]=os.path.join("audio/LibriSpeechSamples/test-clean-100-npy",test_data[i].split('/')[-1])
+        test_data[i]=test_data[i].replace('\\', '/')
     # train_data=[audio/LibriSpeechSamples/train-clean-100-npy/19-100-0001.npy,
     #             audio/LibriSpeechSamples/train-clean-100-npy/19-100-0002.npy,
     #                               ...                                       ]
-    # test_data =[audio/LibriSpeechSamples/train-clean-100-npy/19-100-0063.npy,
-    #             audio/LibriSpeechSamples/train-clean-100-npy/19-100-0064.npy,
+    # test_data =[audio/LibriSpeechSamples/test-clean-100-npy/19-100-0063.npy,
+    #             audio/LibriSpeechSamples/test-clean-100-npy/19-100-0064.npy,
     #                               ...                                       ]
+    print(len(test_data))
+    print(len(train_data))
     batchloader = batchTrainingImageLoader(train_data,labels_to_id,no_of_speakers, batch_size=batch_size)
     testloader = batchTestImageLoader(test_data, labels_to_id, no_of_speakers, batch_size=batch_size)
     test_steps = int(len(test_data)/batch_size)
@@ -134,7 +143,7 @@ def main():
     x = Dense(no_of_speakers, activation='softmax',name='softmax_layer')(x)
 
     model = Model(base_model.input, x)
-    logging.info(model.summary())
+    #logging.info(model.summary())
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
    
     grad_steps = 0
