@@ -30,7 +30,7 @@ def loadFromList(paths, batch_start, batch_end, labels_to_id, no_of_speakers, ):
     y_ = []                              
     for i in range(batch_start, batch_end):
         x_ = np.load(paths[i]) # 讀npy檔案並回傳npy檔案內容(ndarray type)
-        x.append(clipped_audio(x_)) 
+        x.append(clipped_audio(x_)) # clipped_audio(x_)把每個音擋切成相同大小 (160,64,1)
 
         last = paths[i].split("/")[-1] # for example:last->19-100-0001.npy
         y_.append(labels_to_id[last.split("-")[0]]) # for example:last.split("-")[0]]->19, labels_to_id[19]=0
@@ -65,7 +65,9 @@ def batchTrainingImageLoader(train_data, labels_to_id, no_of_speakers, batch_siz
             random.shuffle(x_train_t)
             random.seed(randnum)
             random.shuffle(y_train_t)
-            yield (x_train_t, y_train_t) # 類似於return 
+            yield (x_train_t, y_train_t) 
+            # 類似於return 差在於回傳的是 generator 物件。
+            # 使用generator的next方法執行batchTrainingImageLoader裡面的code
             batch_start += batch_size
             batch_end += batch_size
 
@@ -125,7 +127,7 @@ def main():
     num_frames = b.shape[0]
     logging.info('num_frames = {}'.format(num_frames))
     logging.info('batch size: {}'.format(batch_size))
-    logging.info("x_shape:{0}, y_shape:{1}".format(x_test.shape, y_test.shape))
+    logging.info("x_shape:{0}, y_shape:{1}".format(x_test.shape, y_test.shape))# x_test.shape=(96,160,64,1) y_test.shape=(96,251)
 
     base_model = convolutional_model(input_shape=x_test.shape[1:], batch_size=batch_size, num_frames=num_frames)
     x = base_model.output
@@ -134,13 +136,10 @@ def main():
     model = Model(base_model.input, x)
     logging.info(model.summary())
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    print("printing format per batch:", model.metrics_names)
-    # y_ = np.argmax(y_train, axis=0)
-    # class_weights = sklearn.utils.class_weight.compute_class_weight('balanced', np.unique(y_), y_)
-
+   
     grad_steps = 0
     last_checkpoint = utils.get_last_checkpoint_if_any(c.PRE_CHECKPOINT_FOLDER)
-    last_checkpoint = None
+    #last_checkpoint = None
     if last_checkpoint is not None:
         logging.info('Found checkpoint [{}]. Resume from here...'.format(last_checkpoint))
         model.load_weights(last_checkpoint)
