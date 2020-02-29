@@ -74,12 +74,12 @@ class MiniBatch:
     def to_inputs(self):
 
         new_x = []
-        for i in range(len(self.libri_batch)):
+        for i in range(len(self.libri_batch)): # len(self.libri_batch)=96
             filename = self.libri_batch[i:i + 1]['filename'].values[0]
             x = np.load(filename)
             new_x.append(clipped_audio(x))
         x = np.array(new_x) #(batchsize, num_frames, 64, 1)
-        y = self.libri_batch['speaker_id'].values
+        y = self.libri_batch['speaker_id'].values #batchsize
 
         # anchor examples [speakers] == positive examples [speakers]
         np.testing.assert_array_equal(y[0:self.num_triplets], y[self.num_triplets:2 * self.num_triplets])
