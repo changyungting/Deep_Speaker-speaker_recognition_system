@@ -31,14 +31,18 @@ def create_dict(files,labels,spk_uniq):
     train_dict = {}
     for i in range(len(spk_uniq)):
         train_dict[spk_uniq[i]] = []
-
+    # train_dict[19]=[] train_dict[26]=[]
     for i in range(len(labels)):
         train_dict[labels[i]].append(files[i])
-
+    # train_dict={19: ['audio/LibriSpeechSamples/train-clean-100-npy/19-150-0001.npy', 'audio/LibriSpeechSamples/train-clean-100-npy/19-150-0001.npy'],
+    #             26: ['audio/LibriSpeechSamples/train-clean-100-npy/26-100-0001.npy']}
     for spk in spk_uniq:
         if len(train_dict[spk]) < 2:
             train_dict.pop(spk)
+    # 26 pop out
+    # train_dict={19: ['audio/LibriSpeechSamples/train-clean-100-npy/19-150-0001.npy', 'audio/LibriSpeechSamples/train-clean-100-npy/19-150-0001.npy']}
     unique_speakers=list(train_dict.keys())
+    # unique_speakers=[19]
     return train_dict, unique_speakers
 
 def main(libri_dir=c.DATASET_DIR):
@@ -46,17 +50,16 @@ def main(libri_dir=c.DATASET_DIR):
     PRE_TRAIN = c.PRE_TRAIN
     logging.info('Looking for fbank features [.npy] files in {}.'.format(libri_dir))
     libri = data_catalog(libri_dir)
-
-    if len(libri) == 0:
-        logging.warning('Cannot find npy files, we will load audio, extract features and save it as npy file')
-        logging.warning('Waiting for preprocess...')
-        preprocess_and_save(c.WAV_DIR, c.DATASET_DIR)
-        libri = data_catalog(libri_dir)
-        if len(libri) == 0:
-            logging.warning('Have you converted flac files to wav? If not, run audio/convert_flac_2_wav.sh')
-            exit(1)
-    unique_speakers = libri['speaker_id'].unique()
+    #                          filename                                       speaker_id
+    #   0    audio/LibriSpeechSamples/train-clean-100-npy/1-100-0001.npy        1
+    #   1    audio/LibriSpeechSamples/train-clean-100-npy/1-100-0002.npy        1        
+    unique_speakers = libri['speaker_id'].unique() # 251 speaker
     spk_utt_dict, unique_speakers = create_dict(libri['filename'].values,libri['speaker_id'].values,unique_speakers)
+    # libri['filename'].values:array type [audio/LibriSpeechSamples/train-clean-100-npy/19-150-0001.npy,
+    #                                      audio/LibriSpeechSamples/train-clean-100-npy/19-100-0001.npy
+    #                                      audio/LibriSpeechSamples/train-clean-100-npy/26-100-0001.npy]
+    # libri['speaker_id'].values:array type [19,19,26]
+    # unique_speakers=libri['speaker_id'].unique():array type [19,26]
     select_batch.create_data_producer(unique_speakers, spk_utt_dict)
 
     batch = stochastic_mini_batch(libri, batch_size=c.BATCH_SIZE, unique_speakers=unique_speakers)
