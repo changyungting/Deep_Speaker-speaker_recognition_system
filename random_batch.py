@@ -42,7 +42,9 @@ class MiniBatch:
         positive_batch = None
         negative_batch = None
         for ii in range(num_triplets):
-            two_different_speakers = np.random.choice(unique_speakers, size=2, replace=False)
+            two_different_speakers = np.random.choice(unique_speakers, size=2, replace=False) 
+            # random.choice(seq):從 seq 之中回傳一個元素,replacement 代表的意思是抽樣之後還放不放回去，
+            # 如果是False的話，那麼出來的三個數都不一樣，如果是True的話， 有可能會出現重複的，因為前面的抽的放回去了
             anchor_positive_speaker = two_different_speakers[0]
             negative_speaker = two_different_speakers[1]
             anchor_positive_file = libri[libri['speaker_id'] == anchor_positive_speaker].sample(n=2, replace=False)
