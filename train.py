@@ -54,17 +54,17 @@ def main(libri_dir=c.DATASET_DIR):
     #   0    audio/LibriSpeechSamples/train-clean-100-npy/1-100-0001.npy        1
     #   1    audio/LibriSpeechSamples/train-clean-100-npy/1-100-0002.npy        1        
     unique_speakers = libri['speaker_id'].unique() # 251 speaker
-    spk_utt_dict, unique_speakers = create_dict(libri['filename'].values,libri['speaker_id'].values,unique_speakers)
+    # spk_utt_dict, unique_speakers = create_dict(libri['filename'].values,libri['speaker_id'].values,unique_speakers)
     # libri['filename'].values:array type [audio/LibriSpeechSamples/train-clean-100-npy/19-150-0001.npy,
     #                                      audio/LibriSpeechSamples/train-clean-100-npy/19-100-0001.npy
     #                                      audio/LibriSpeechSamples/train-clean-100-npy/26-100-0001.npy]
     # libri['speaker_id'].values:array type [19,19,26]
     # unique_speakers=libri['speaker_id'].unique():array type [19,26]
-    select_batch.create_data_producer(unique_speakers, spk_utt_dict)
+    # select_batch.create_data_producer(unique_speakers, spk_utt_dict)
 
     batch = stochastic_mini_batch(libri, batch_size=c.BATCH_SIZE, unique_speakers=unique_speakers)
     batch_size = c.BATCH_SIZE * c.TRIPLET_PER_BATCH
-    x, y = batch.to_inputs()
+    x, y = batch.to_inputs() # 
     b = x[0]
     num_frames = b.shape[0]
     train_batch_size = batch_size
@@ -75,13 +75,7 @@ def main(libri_dir=c.DATASET_DIR):
     logging.info('batch size: {}'.format(batch_size))
     logging.info('input shape: {}'.format(input_shape))
     logging.info('x.shape : {}'.format(x.shape))
-    orig_time = time()
     model = convolutional_model(input_shape=input_shape, batch_size=batch_size, num_frames=num_frames)
-    logging.info(model.summary())
-    gru_model = None
-    if c.COMBINE_MODEL:
-        gru_model = recurrent_model(input_shape=input_shape, batch_size=batch_size, num_frames=num_frames)
-        logging.info(gru_model.summary())
     grad_steps = 0
 
     if PRE_TRAIN:
@@ -109,31 +103,24 @@ def main(libri_dir=c.DATASET_DIR):
                 gru_model.load_weights(last_checkpoint)
                 logging.info('[DONE]')
 
-    #adam = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
     model.compile(optimizer='adam', loss=deep_speaker_loss)
-    if c.COMBINE_MODEL:
-        gru_model.compile(optimizer='adam', loss=deep_speaker_loss)
-    print("model_build_time",time()-orig_time)
     logging.info('Starting training...')
     lasteer = 10
     eer = 1
     while True:
         orig_time = time()
-        x, _ = select_batch.best_batch(model, batch_size=c.BATCH_SIZE)
+        # x, _ = select_batch.best_batch(model, batch_size=c.BATCH_SIZE)
+        batch = stochastic_mini_batch(libri, batch_size=c.BATCH_SIZE, unique_speakers=unique_speakers)
+        x, _ = batch.to_inputs()
         print("select_batch_time:", time() - orig_time)
-        y = np.random.uniform(size=(x.shape[0], 1))
+        y = np.random.uniform(size=(x.shape[0], 1)) # 產生[0,1]之間的96個數
         # If "ValueError: Error when checking target: expected ln to have shape (None, 512) but got array with shape (96, 1)"
         # please modify line 121 to following line
         # y = np.random.uniform(size=(x.shape[0], 512))
         logging.info('== Presenting step #{0}'.format(grad_steps))
         orig_time = time()
         loss = model.train_on_batch(x, y)
-        logging.info('== Processed in {0:.2f}s by the network, training loss = {1}.'.format(time() - orig_time, loss))
-        if c.COMBINE_MODEL:
-            loss1 = gru_model.train_on_batch(x, y)
-            logging.info( '== Processed in {0:.2f}s by the gru-network, training loss = {1}.'.format(time() - orig_time, loss1))
-            with open(c.GRU_CHECKPOINT_FOLDER + '/losses_gru.txt', "a") as f:
-                f.write("{0},{1}\n".format(grad_steps, loss1))
+        logging.info('== Processed in {0:.2f}s by the network, training loss = {1}.'.format(time() - orig_time, loss)
         # record training loss
         with open(c.LOSS_LOG, "a") as f:
             f.write("{0},{1}\n".format(grad_steps, loss))
