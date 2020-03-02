@@ -13,9 +13,9 @@ import numpy as np
 import sys
 import os
 import random
-from keras.optimizers import Adam
-from keras.layers.core import Dense
-from keras.models import Model
+from tensorflow.python.keras.optimizers import Adam
+from tensorflow.python.keras.layers.core import Dense
+from tensorflow.python.keras.models import Model
 
 import constants as c
 import select_batch
@@ -25,6 +25,7 @@ from random_batch import stochastic_mini_batch
 from triplet_loss import deep_speaker_loss
 from utils import get_last_checkpoint_if_any, create_dir_and_delete_content
 from test_model import eval_model
+
 
 
 def create_dict(files,labels,spk_uniq):
@@ -76,6 +77,7 @@ def main(libri_dir=c.DATASET_DIR):
     logging.info('input shape: {}'.format(input_shape))
     logging.info('x.shape : {}'.format(x.shape))
     model = convolutional_model(input_shape=input_shape, batch_size=batch_size, num_frames=num_frames)
+    gru_model = None
     grad_steps = 0
 
     if PRE_TRAIN:
@@ -120,8 +122,8 @@ def main(libri_dir=c.DATASET_DIR):
         logging.info('== Presenting step #{0}'.format(grad_steps))
         orig_time = time()
         loss = model.train_on_batch(x, y)
-        logging.info('== Processed in {0:.2f}s by the network, training loss = {1}.'.format(time() - orig_time, loss)
-        # record training loss
+        logging.info('== Processed in {0:.2f}s by the network, training loss = {1}.'.format(time() - orig_time, loss))
+        
         with open(c.LOSS_LOG, "a") as f:
             f.write("{0},{1}\n".format(grad_steps, loss))
         if (grad_steps) % 10 == 0:
